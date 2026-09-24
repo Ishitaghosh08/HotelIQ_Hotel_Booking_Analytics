@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HotelIQ – Hotel Business Intelligence & Cancellation Risk Dashboard</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --border-card: rgba(255, 255, 255, 0.1);
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-rose: #f43f5e;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #1e1b4b 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-card);
+    }
+
+    .logo-container h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-container p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid var(--accent-blue);
+      color: #93c5fd;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    /* Filter Bar */
+    .filter-bar {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .filter-group label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .filter-group select {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border-card);
+      color: var(--text-main);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .filter-group select:focus {
+      border-color: var(--accent-blue);
+    }
+
+    /* Navigation Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border-card);
+      padding-bottom: 8px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 10px 18px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      color: #fff;
+      background: var(--accent-blue);
+    }
+
+    /* Tab Content Panels */
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* KPI Cards Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent-blue);
+    }
+
+    .kpi-card.danger::before { background: var(--accent-rose); }
+    .kpi-card.success::before { background: var(--accent-emerald); }
+    .kpi-card.warning::before { background: var(--accent-amber); }
+
+    .kpi-title {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .kpi-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .kpi-subtext {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Charts Layout Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .chart-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .chart-header h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .chart-container {
+      position: relative;
+      height: 280px;
+      width: 100%;
+    }
+
+    /* Business Insights Cards */
+    .insight-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .insight-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .insight-tag {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .insight-box {
+      background: rgba(15, 23, 42, 0.6);
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent-blue);
+    }
+
+    .insight-box.fact { border-left-color: var(--accent-cyan); }
+    .insight-box.risk { border-left-color: var(--accent-rose); }
+    .insight-box.action { border-left-color: var(--accent-emerald); }
+
+    .insight-box label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .insight-box p {
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
+
+    /* Risk Predictor Calculator Widget */
+    .predictor-card {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+      border: 1px solid var(--accent-blue);
+      border-radius: 14px;
+      padding: 24px;
+      margin-top: 24px;
+    }
+
+    .predictor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .input-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-field label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .input-field input, .input-field select {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border-card);
+      color: var(--text-main);
+      padding: 10px;
+      border-radius: 8px;
+      outline: none;
+    }
+
+    .calc-btn {
+      grid-column: 1 / -1;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-top: 8px;
+    }
+
+    .calc-btn:hover {
+      opacity: 0.9;
+    }
+
+    .risk-output {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 10px;
+      text-align: center;
+      background: rgba(15, 23, 42, 0.8);
+      display: none;
+    }
+
+    .risk-output.show {
+      display: block;
+    }
+
+    .risk-score {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <header>
+    <div class="logo-container">
+      <h1>HotelIQ Dashboard</h1>
+      <p>Hotel Business Intelligence & Cancellation Risk Analytics</p>
+    </div>
+    <div class="badge">Dataset: 119,203 Cleaned Bookings</div>
+  </header>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>Hotel Type</label>
+      <select id="filter-hotel" onchange="updateDashboard()">
+        <option value="All">All Hotels</option>
+        <option value="City Hotel">City Hotel</option>
+        <option value="Resort Hotel">Resort Hotel</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Arrival Year</label>
+      <select id="filter-year" onchange="updateDashboard()">
+        <option value="All">All Years (2015-2017)</option>
+        <option value="2015">2015</option>
+        <option value="2016">2016</option>
+        <option value="2017">2017</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Market Segment</label>
+      <select id="filter-market" onchange="updateDashboard()">
+        <option value="All">All Segments</option>
+        <option value="Online TA">Online TA</option>
+        <option value="Offline TA/TO">Offline TA/TO</option>
+        <option value="Groups">Groups</option>
+        <option value="Direct">Direct</option>
+        <option value="Corporate">Corporate</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Deposit Type</label>
+      <select id="filter-deposit" onchange="updateDashboard()">
+        <option value="All">All Deposit Types</option>
+        <option value="No Deposit">No Deposit</option>
+        <option value="Non Refund">Non Refundable</option>
+        <option value="Refundable">Refundable</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Customer Type</label>
+      <select id="filter-customer" onchange="updateDashboard()">
+        <option value="All">All Customer Types</option>
+        <option value="Transient">Transient</option>
+        <option value="Transient-Party">Transient-Party</option>
+        <option value="Contract">Contract</option>
+        <option value="Group">Group</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- KPI Cards Grid -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-title">Total Bookings</div>
+      <div class="kpi-value" id="kpi-bookings">119,203</div>
+      <div class="kpi-subtext">Cleaned operational records</div>
+    </div>
+    <div class="kpi-card danger">
+      <div class="kpi-title">Cancellation Rate</div>
+      <div class="kpi-value" id="kpi-cancel-rate">37.07%</div>
+      <div class="kpi-subtext" id="kpi-cancel-count">44,194 total cancellations</div>
+    </div>
+    <div class="kpi-card success">
+      <div class="kpi-title">Average ADR</div>
+      <div class="kpi-value" id="kpi-adr">$101.93</div>
+      <div class="kpi-subtext">Average Daily Rate / Room</div>
+    </div>
+    <div class="kpi-card warning">
+      <div class="kpi-title">Est. Lost Value</div>
+      <div class="kpi-value" id="kpi-lost-val">$16.72M</div>
+      <div class="kpi-subtext">39.15% of estimated potential</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">Avg Stay Length</div>
+      <div class="kpi-value" id="kpi-stay">3.43 Nights</div>
+      <div class="kpi-subtext">Weekend & weeknights</div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('overview')">Executive Overview</button>
+    <button class="tab-btn" onclick="switchTab('demand')">Demand & Pricing</button>
+    <button class="tab-btn" onclick="switchTab('customer')">Customer Segmentation</button>
+    <button class="tab-btn" onclick="switchTab('risk')">Cancellation & Risk Analysis</button>
+    <button class="tab-btn" onclick="switchTab('insights')">Insights & Risk Predictor</button>
+  </div>
+
+  <!-- TAB 1: EXECUTIVE OVERVIEW -->
+  <div id="tab-overview" class="tab-panel active">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Hotel Type Booking Volume & Cancellations</h3>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartHotelType"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Cancellation Rate by Deposit Type</h3>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartDepositType"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: DEMAND & PRICING -->
+  <div id="tab-demand" class="tab-panel">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Monthly Booking Volume Trends</h3>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartMonthlyVolume"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Average Daily Rate (ADR) Seasonality</h3>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartMonthlyADR"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: CUSTOMER SEGMENTATION -->
+  <div id="tab-customer" class="tab-panel">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Market Segment Volume & Cancellation Rate</h3>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartMarketSegment"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Customer Type Breakdown</h3>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartCustomerType"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: CANCELLATION & RISK ANALYSIS -->
+  <div id="tab-risk" class="tab-panel">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Cancellation Rate by Lead Time Bin</h3>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartLeadTime"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Room Assignment Upgrade vs Retention Rate</h3>
+        </div>
+        <div class="chart-container">
+          <canvas id="chartRoomChange"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 5: INSIGHTS & RISK PREDICTOR -->
+  <div id="tab-insights" class="tab-panel">
+    <!-- Insight Cards -->
+    <div class="insight-card">
+      <div class="insight-header">
+        <span class="insight-tag">KEY FINDING 1</span>
+        <h3>High Lead Time Speculation Risk</h3>
+      </div>
+      <div class="insight-grid">
+        <div class="insight-box fact">
+          <label>Fact</label>
+          <p>Bookings made >180 days in advance exhibit a 55.46% cancellation rate (rising to 67.65% for >365 days).</p>
+        </div>
+        <div class="insight-box">
+          <label>Insight</label>
+          <p>Long lead times foster speculative bookings where guests reserve options without firm travel commitment.</p>
+        </div>
+        <div class="insight-box risk">
+          <label>Risk / Opportunity</label>
+          <p>High inventory holding costs and unfulfilled room allocation blocking short-notice travelers.</p>
+        </div>
+        <div class="insight-box action">
+          <label>Possible Action</label>
+          <p>Implement automated re-confirmation touchpoints at 90, 60, and 30 days prior to arrival date.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-header">
+        <span class="insight-tag">KEY FINDING 2</span>
+        <h3>Non-Refundable Wholesale Deposit Paradox</h3>
+      </div>
+      <div class="insight-grid">
+        <div class="insight-box fact">
+          <label>Fact</label>
+          <p>Non-refundable deposit bookings show an overwhelming 99.36% cancellation rate (14,493 out of 14,586).</p>
+        </div>
+        <div class="insight-box">
+          <label>Insight</label>
+          <p>Tour operators block room blocks with non-refundable tags far in advance and relinquish unallocated blocks.</p>
+        </div>
+        <div class="insight-box risk">
+          <label>Risk / Opportunity</label>
+          <p>Artificial demand signals distorting dynamic pricing models and hotel revenue management.</p>
+        </div>
+        <div class="insight-box action">
+          <label>Possible Action</label>
+          <p>Restructure wholesale contracts; enforce strict release deadlines and group pre-payment guarantees.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Risk Predictor Calculator Widget -->
+    <div class="predictor-card">
+      <h2>🔮 Live Booking Cancellation Risk Calculator</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Simulate Random Forest ML risk scoring based on booking features.</p>
+      
+      <div class="predictor-grid">
+        <div class="input-field">
+          <label>Lead Time (Days)</label>
+          <input type="number" id="calc-lead" value="120">
+        </div>
+        <div class="input-field">
+          <label>Deposit Type</label>
+          <select id="calc-deposit">
+            <option value="No Deposit">No Deposit</option>
+            <option value="Non Refund">Non Refundable</option>
+            <option value="Refundable">Refundable</option>
+          </select>
+        </div>
+        <div class="input-field">
+          <label>Market Segment</label>
+          <select id="calc-market">
+            <option value="Online TA">Online TA</option>
+            <option value="Offline TA/TO">Offline TA/TO</option>
+            <option value="Groups">Groups</option>
+            <option value="Direct">Direct</option>
+          </select>
+        </div>
+        <div class="input-field">
+          <label>Special Requests</label>
+          <input type="number" id="calc-requests" value="0" min="0" max="5">
+        </div>
+        <div class="input-field">
+          <label>Previous Cancellations</label>
+          <input type="number" id="calc-prev-cancel" value="0" min="0">
+        </div>
+        <div class="input-field">
+          <label>Room Upgrade Given?</label>
+          <select id="calc-room">
+            <option value="0">No (Room Unchanged)</option>
+            <option value="1">Yes (Room Upgraded)</option>
+          </select>
+        </div>
+        <button class="calc-btn" onclick="calculateRisk()">Predict Cancellation Risk Score</button>
+      </div>
+
+      <div class="risk-output" id="risk-output">
+        <div style="font-size: 0.85rem; color: var(--text-muted);">ESTIMATED CANCELLATION PROBABILITY</div>
+        <div class="risk-score" id="risk-score">68.4%</div>
+        <div id="risk-badge" style="font-weight: 700; color: var(--accent-rose);">HIGH RISK BOOKING</div>
+        <p id="risk-rec" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px;"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Tab Switching
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-' + tabId).classList.add('active');
+  }
+
+  // Chart instances container
+  let charts = {};
+
+  // Initialize Charts
+  window.onload = function() {
+    initCharts();
+  };
+
+  function initCharts() {
+    // 1. Hotel Type Chart
+    const ctxHotel = document.getElementById('chartHotelType').getContext('2d');
+    charts.hotel = new Chart(ctxHotel, {
+      type: 'bar',
+      data: {
+        labels: ['City Hotel', 'Resort Hotel'],
+        datasets: [
+          { label: 'Check-Out (Confirmed)', data: [46084, 28925], backgroundColor: '#10b981' },
+          { label: 'Canceled', data: [33074, 11120], backgroundColor: '#f43f5e' }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } }
+    });
+
+    // 2. Deposit Type Chart
+    const ctxDeposit = document.getElementById('chartDepositType').getContext('2d');
+    charts.deposit = new Chart(ctxDeposit, {
+      type: 'bar',
+      data: {
+        labels: ['No Deposit', 'Non Refundable', 'Refundable'],
+        datasets: [{
+          label: 'Cancellation Rate (%)',
+          data: [28.40, 99.36, 22.22],
+          backgroundColor: ['#3b82f6', '#f43f5e', '#10b981']
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+
+    // 3. Monthly Volume Chart
+    const ctxMonth = document.getElementById('chartMonthlyVolume').getContext('2d');
+    charts.month = new Chart(ctxMonth, {
+      type: 'line',
+      data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        datasets: [
+          { label: 'Bookings Volume', data: [5929, 8068, 9794, 11089, 11791, 10939, 12661, 13877, 10508, 11160, 6794, 6794], borderColor: '#60a5fa', tension: 0.3, fill: true, backgroundColor: 'rgba(96, 165, 250, 0.1)' }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // 4. Monthly ADR Chart
+    const ctxAdr = document.getElementById('chartMonthlyADR').getContext('2d');
+    charts.adr = new Chart(ctxAdr, {
+      type: 'bar',
+      data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        datasets: [{ label: 'Average ADR ($)', data: [75.1, 73.8, 80.6, 100.4, 108.7, 116.6, 126.8, 140.1, 105.0, 90.0, 75.6, 88.0], backgroundColor: '#f59e0b' }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // 5. Market Segment Chart
+    const ctxMarket = document.getElementById('chartMarketSegment').getContext('2d');
+    charts.market = new Chart(ctxMarket, {
+      type: 'bar',
+      data: {
+        labels: ['Online TA', 'Offline TA/TO', 'Groups', 'Direct', 'Corporate'],
+        datasets: [
+          { label: 'Total Bookings', data: [56407, 24181, 19790, 12580, 5282], backgroundColor: '#3b82f6' },
+          { label: 'Cancellations', data: [20734, 8301, 12094, 1933, 991], backgroundColor: '#f43f5e' }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // 6. Customer Type Doughnut
+    const ctxCustomer = document.getElementById('chartCustomerType').getContext('2d');
+    charts.customer = new Chart(ctxCustomer, {
+      type: 'doughnut',
+      data: {
+        labels: ['Transient', 'Transient-Party', 'Contract', 'Group'],
+        datasets: [{ data: [89474, 25083, 4072, 574], backgroundColor: ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981'] }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // 7. Lead Time Chart
+    const ctxLead = document.getElementById('chartLeadTime').getContext('2d');
+    charts.lead = new Chart(ctxLead, {
+      type: 'bar',
+      data: {
+        labels: ['Same Day', '1-7 Days', '8-30 Days', '31-90 Days', '91-180 Days', '181-365 Days', '>365 Days'],
+        datasets: [{ label: 'Cancellation Rate (%)', data: [6.66, 10.96, 27.88, 37.73, 44.74, 55.46, 67.65], backgroundColor: '#f43f5e' }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // 8. Room Change Chart
+    const ctxRoom = document.getElementById('chartRoomChange').getContext('2d');
+    charts.room = new Chart(ctxRoom, {
+      type: 'bar',
+      data: {
+        labels: ['Room Unchanged', 'Room Upgraded/Changed'],
+        datasets: [
+          { label: 'Cancellation Rate (%)', data: [41.56, 5.41], backgroundColor: ['#f43f5e', '#10b981'] }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
+  // Risk Predictor Logic
+  function calculateRisk() {
+    const lead = parseFloat(document.getElementById('calc-lead').value) || 0;
+    const deposit = document.getElementById('calc-deposit').value;
+    const market = document.getElementById('calc-market').value;
+    const requests = parseFloat(document.getElementById('calc-requests').value) || 0;
+    const prevCancel = parseFloat(document.getElementById('calc-prev-cancel').value) || 0;
+    const room = document.getElementById('calc-room').value;
+
+    let score = 25.0;
+
+    // Lead time weighting
+    if (lead > 365) score += 40;
+    else if (lead > 180) score += 30;
+    else if (lead > 90) score += 20;
+    else if (lead > 30) score += 10;
+    else if (lead <= 7) score -= 15;
+
+    // Deposit
+    if (deposit === 'Non Refund') score += 45;
+
+    // Market Segment
+    if (market === 'Groups') score += 20;
+    else if (market === 'Direct') score -= 15;
+
+    // Special Requests
+    score -= requests * 8;
+
+    // Previous cancellations
+    score += prevCancel * 15;
+
+    // Room upgrade
+    if (room === '1') score -= 25;
+
+    // Clamp score
+    score = Math.max(3.0, Math.min(99.5, score));
+
+    const output = document.getElementById('risk-output');
+    const scoreEl = document.getElementById('risk-score');
+    const badgeEl = document.getElementById('risk-badge');
+    const recEl = document.getElementById('risk-rec');
+
+    output.classList.add('show');
+    scoreEl.innerText = score.toFixed(1) + '%';
+
+    if (score >= 60) {
+      scoreEl.style.color = '#f43f5e';
+      badgeEl.innerText = '⚠️ HIGH CANCELLATION RISK';
+      badgeEl.style.color = '#f43f5e';
+      recEl.innerText = 'Recommendation: Send advance confirmation touchpoint; request non-refundable partial deposit or offer complimentary room upgrade incentive.';
+    } else if (score >= 30) {
+      scoreEl.style.color = '#f59e0b';
+      badgeEl.innerText = '⚡ MODERATE RISK';
+      badgeEl.style.color = '#f59e0b';
+      recEl.innerText = 'Recommendation: Monitor booking telemetry; send automated pre-arrival welcome email 14 days prior.';
+    } else {
+      scoreEl.style.color = '#10b981';
+      badgeEl.innerText = '✅ LOW RISK (HIGH CONFIRMATION LIKELIHOOD)';
+      badgeEl.style.color = '#10b981';
+      recEl.innerText = 'Recommendation: Standard booking workflow; high probability of check-in.';
+    }
+  }
+
+  function updateDashboard() {
+    // Dynamic filter response placeholder
+    console.log('Filters updated');
+  }
+</script>
+
+</body>
+</html>
